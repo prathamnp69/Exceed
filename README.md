@@ -1,156 +1,162 @@
-# Muffin vs Chihuahua Classifier (Data-Centric AI Hackathon)
+# Chihuahua vs Muffin – 3LC Kaggle Starter Kit
 
-Binary image classification project built during a Data-Centric AI Hackathon using the 3LC platform.
+**The 3LC x Hack4Impact-UMD AI Hackathon: Data-Centric AI with 3LC**
 
-The objective was to train a ResNet-18 model to classify:
-- Chihuahua (0)
-- Muffin (1)
+> Can you tell a chihuahua from a muffin? Build an image classifier using data-centric AI with 3LC and compete on the Kaggle leaderboard.
 
-The challenge focused on improving model performance by improving the dataset using 3LC tools instead of modifying the model architecture.
+**Setup and workflow:** See the competition **Overview**, **Description**, and **Iterative Workflow** tabs on Kaggle for the full guide. You must also complete the **evaluation & feedback form** by the deadline (see Overview on Kaggle).
 
 ---
 
-## Project Overview
+## Quick start
 
-This project demonstrates a data-centric machine learning workflow.
+### 1. Environment
 
-1. Train a model on a small labeled dataset.
-2. Use the 3LC dashboard to analyze embeddings and predictions.
-3. Label useful samples from the unlabeled dataset.
-4. Adjust sample weights.
-5. Retrain the model with improved data.
+```bash
+python -m venv 3lc-env
+# Windows: 3lc-env\Scripts\activate
+# Mac/Linux: source 3lc-env/bin/activate
 
-Repeating this process improves accuracy on the hidden test dataset.
+# CPU: install 3LC and PyTorch. For GPU: install PyTorch with CUDA first, then 3LC (see Kaggle "Iterative Workflow - Environment Setup").
+pip install 3lc joblib pytz umap-learn torch torchvision
+```
 
----
+The starter uses **UMAP** for embedding reduction (3D embeddings in the Dashboard). This works on both CPU and GPU and avoids environment-specific issues that PaCMAP can have (e.g. on some Windows/PyTorch setups). 3LC also supports PaCMAP if you want to switch `method="pacmap"` in `train.py` and install `pacmap`.
 
-## Dataset
+### 2. 3LC login
 
-### Train Dataset
-- 100 labeled images
-  - 50 Chihuahua
-  - 50 Muffin
-- 3579 unlabeled images
+- Create account: [https://account.3lc.ai](https://account.3lc.ai)
+- API key: [https://account.3lc.ai/api-key](https://account.3lc.ai/api-key)
 
-### Validation Dataset
-- 1000 images
-- Balanced dataset
-  - 500 Chihuahua
-  - 500 Muffin
+```bash
+3lc login <your_api_key>
+3lc service   # Required to use the 3LC Dashboard (label undefined, view embeddings)
+```
 
-### Test Dataset
-- 1184 images
-- Labels are hidden
-- Predictions submitted to Kaggle
+### 3. Data
 
----
+The kit includes a pre-split `data/` folder:
 
-## Model
+```
+data/
+├── train/
+│   ├── chihuahua/   (labeled)
+│   ├── muffin/     (labeled)
+│   └── undefined/  (unlabeled — use 3LC to label and add to training)
+├── val/
+│   ├── chihuahua/
+│   └── muffin/
+└── test/           (flat — only images, no subfolders; for submission)
+```
 
-Model used: **ResNet-18**
+**No test data is used during training.** Only `train` and `val` are registered in 3LC; `predict.py` reads `data/test/` only for inference.
 
-Competition rules:
-- No pretrained weights
-- Train from scratch
-- Only provided dataset allowed
+### 4. Run order (train and submit)
 
----
+```bash
+python register_tables.py   # once — create 3LC tables from data/train, data/val
+python train.py             # train model; writes best_model.pth
+python predict.py           # run inference; writes submission.csv
+```
 
-## Workflow
-
-### Step 1: Register dataset
-
-python register_tables.py
-
-### Step 2: Initial training
-
-python train.py
-
-### Step 3: Start 3LC dashboard
-
-3lc service
-
-Open the dashboard in browser:
-
-https://dashboard.3lc.ai
-
-### Step 4: Label undefined samples
-
-Use embeddings to:
-- identify clusters
-- label samples
-- set sample weight = 1
-
-### Step 5: Retrain model
-
-python train.py
-
-### Step 6: Generate predictions
-
-python predict.py
-
-This creates:
-
-submission.csv
+Upload `submission.csv` to the Kaggle competition.
 
 ---
 
-## Submission Format
+## Competition at a glance
 
-image_id,prediction,confidence  
-test_00001,0,0.92  
-test_00002,1,0.88  
-
-prediction:
-- 0 = Chihuahua
-- 1 = Muffin
-
-confidence:
-- value between 0 and 1
+| Item | Details |
+|------|--------|
+| **Task** | Binary classification: chihuahua (0) vs muffin (1) |
+| **Model** | ResNet-18 (fixed); no pretrained weights — train from scratch |
+| **Metric** | Accuracy on hidden test set |
+| **Tool** | 3LC (required) |
 
 ---
 
-## Project Structure
+## Data-centric loop
 
-project/
-
-data/  
- ├── train/  
- ├── val/  
- └── test/  
-
-register_tables.py  
-train.py  
-predict.py  
-config.yaml  
-sample_submission.csv  
-
-submission.csv  
-README.md  
+1. **Train** – `train.py` → 3LC run with embeddings.
+2. **Analyze** – Dashboard: embeddings, per-sample metrics.
+3. **Fix data** – Label `undefined`, correct labels, adjust weights.
+4. **Retrain** – `train.py` uses `.latest()` tables.
+5. **Submit** – `predict.py` → `submission.csv` → Kaggle.
 
 ---
 
-## Tools Used
+## Data at a glance (no ambiguity)
 
-- Python
-- PyTorch
-- 3LC Data-Centric AI Platform
-- UMAP embeddings
-- Kaggle
+| Set | Labeled | Unlabeled | Total |
+|-----|---------|-----------|-------|
+| **Train** | 100 (50 chihuahua, 50 muffin) | 3,579 undefined | 3,679 |
+| **Val** | 1,000 (500 per class, balanced) | 0 | 1,000 |
+| **Test** | Hidden | — | 1,184 |
+
+You start with **100 labeled** and **3,579 unlabeled**. Val is 1,000 (500 per class) for stable feedback. Use 3LC to label undefined samples and retrain to improve accuracy.
+
+## Outputs (what each script produces)
+
+| Script | Output | Behavior when run again |
+|--------|--------|--------------------------|
+| `register_tables.py` | 3LC tables (train, val) | **Idempotent:** if tables already exist, skips and does not overwrite; safe to run multiple times |
+| `train.py` | `best_model.pth` | **Overwrites** previous best model |
+| `predict.py` | `submission.csv` | **Overwrites** previous submission file |
+
+So: each training run replaces `best_model.pth`; each prediction run replaces `submission.csv`. There is no versioning; the latest run is the one that counts. For a different checkpoint, rename or copy `best_model.pth` before running `train.py` again.
 
 ---
 
-## What We Learned
+## Loading tables: .latest() vs URL
 
-- Data-centric AI methodology
-- Active learning using embeddings
-- Dataset curation and labeling
-- Experiment tracking using 3LC
-- Improving models through better data instead of architecture changes
+- **Default:** `train.py` loads tables by **name** with **`.latest()`**, so it always uses the newest revision (including any edits you make in the 3LC Dashboard).
+- **Optional:** To train on a **specific** table revision, you can load by URL. In `train.py`, comment out the "OPTION 1" block and uncomment the "OPTION 2" block, then paste your train and val table URLs (from the 3LC Dashboard → Tables tab → copy URL).
 
 ---
 
-## Acknowledgments
+## Files in this kit
 
-- 3LC platform for providing the data-centric AI workflow
-- Sphere Hive for organizing the hackathon
+| File | Purpose |
+|------|--------|
+| `config.yaml` | Competition and training config |
+| `register_tables.py` | Register train/val in 3LC (run once) |
+| `train.py` | Training with 3LC; saves `best_model.pth` |
+| `predict.py` | Inference on test; writes `submission.csv` |
+| `sample_submission.csv` | Required submission format and image_ids |
+| `data/` | Pre-split train, val, and test images |
+| `README.md` | This file |
+
+---
+
+## Submission format
+
+`submission.csv` must have:
+
+- `image_id` – same IDs as in `sample_submission.csv`
+- `prediction` – 0 (chihuahua) or 1 (muffin)
+- `confidence` – float in [0, 1]
+
+---
+
+## Dataset and pipeline verification
+
+- **Splits:** Only `data/train` and `data/val` are registered in 3LC. **Test data is never used for training.** `predict.py` reads only `data/test/` for inference.
+- **Train/val:** Train has labeled (chihuahua, muffin) and undefined (weight=0 until you label in Dashboard). Val has only labeled classes. Class distributions can be checked in the 3LC Dashboard after running `register_tables.py`.
+- **Reproducibility:** `train.py` sets a fixed random seed (see `RANDOM_SEED` in the script) so training is deterministic for the same data and code.
+- **Submission alignment:** If `sample_submission.csv` is present, `predict.py` writes a submission with the same `image_id`s in the same order; missing test images get a default prediction so the file is valid for Kaggle.
+
+---
+
+## For reviewers and live demo
+
+- **Run order:** `register_tables.py` (once) → `train.py` → `predict.py`. No silent dependencies on uncommitted or external state.
+- **Failures are explicit:** Missing model, missing test dir, empty test folder, or invalid model file all print a clear error and exit with non-zero status.
+- **Overwrite behavior:** Each run of `train.py` overwrites `best_model.pth`; each run of `predict.py` overwrites `submission.csv`. No versioning; documented in README and in script docstrings.
+- **Table loading:** Participants see which tables are used: `train.py` prints train and val table URLs after loading. Optional URL-based loading is available (commented out) for pinning to a specific revision.
+
+---
+
+## Resources
+
+- [3LC Documentation](https://docs.3lc.ai)
+
+Good luck, and may the best data win.
